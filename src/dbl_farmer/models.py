@@ -44,6 +44,8 @@ class Objective:
     label: str
     status: ObjectiveStatus = ObjectiveStatus.PENDING
     first_clear_reward: bool = False
+    limited: bool = False
+    required_for_progress: bool = False
 
 
 @dataclass(frozen=True)
@@ -56,15 +58,16 @@ class DetectionResult:
 @dataclass(frozen=True)
 class ActionResult:
     success: bool
+    action: str
     message: str = ""
     data: Any = None
 
 
-@dataclass(frozen=True)
-class ResourceDecision:
-    use_skip_ticket: bool = False
-    use_energy_item: bool = False
-    stop_reason: str | None = None
+class ResourceDecision(Enum):
+    USE_SKIP = auto()
+    RUN_BATTLE = auto()
+    USE_ENERGY_ITEM = auto()
+    STOP_NO_SAFE_ENERGY = auto()
 
 
 class BattleOutcome(Enum):
