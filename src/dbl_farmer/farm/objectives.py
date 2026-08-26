@@ -57,3 +57,29 @@ class ObjectiveQueue:
         else:
             priority = 3
         return priority, 0
+
+
+def build_default_objectives(*, enable_story: bool = True, enable_events: bool = True) -> ObjectiveQueue:
+    objectives: list[Objective] = []
+    if enable_story:
+        objectives.append(
+            Objective(
+                id="story-progress",
+                kind=ObjectiveKind.STORY,
+                label="Story progression",
+                first_clear_reward=True,
+                required_for_progress=True,
+            )
+        )
+    if enable_events:
+        objectives.append(
+            Objective(
+                id="event-progress",
+                kind=ObjectiveKind.EVENT,
+                label="Event progression",
+                first_clear_reward=True,
+                limited=False,
+                required_for_progress=True,
+            )
+        )
+    return ObjectiveQueue(objectives)

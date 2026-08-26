@@ -1,23 +1,27 @@
 from __future__ import annotations
 
 import argparse
+import threading
 import time
 import tkinter as tk
 from pathlib import Path
 from tkinter import ttk
 from typing import Callable
 
+from dbl_farmer.battle.runner import BattleRunner
 from dbl_farmer.config import AppConfig, load_config
 from dbl_farmer.core.state_machine import StateMachine
-from dbl_farmer.farm.objectives import ObjectiveQueue
+from dbl_farmer.farm.objectives import build_default_objectives
 from dbl_farmer.farm.resources import ResourceManager
-from dbl_farmer.input.clicker import SafeClicker
+from dbl_farmer.farm.visual_resources import VisualResourceContextProvider
+from dbl_farmer.input.executor import ActionExecutor
 from dbl_farmer.logging.session_log import SessionLogger
 from dbl_farmer.navigation.router import NavigationRouter
 from dbl_farmer.recovery.manager import RecoveryManager
+from dbl_farmer.vision.capture import ScreenCapture
 from dbl_farmer.vision.detector import ScreenDetector
 from dbl_farmer.vision.states import default_state_definitions
-from dbl_farmer.vision.window import BlueStacksWindowResolver, WindowBounds
+from dbl_farmer.vision.window import BlueStacksWindowResolver, WindowBounds, WindowNotFoundError
 
 
 class RuntimeApp:
@@ -27,48 +31,102 @@ class RuntimeApp:
         config: AppConfig,
         machine: StateMachine,
         logger: SessionLogger,
-        clicker: SafeClicker,
         resolver: BlueStacksWindowResolver,
+        capture: ScreenCapture,
+        executor: ActionExecutor,
         dry_run: bool,
-        action_points: dict[str, tuple[float, float]] | None = None,
+        context_observer=None,
     ) -> None:
         self.config = config
         self.machine = machine
         self.logger = logger
-        self.clicker = clicker
         self.resolver = resolver
+        self.capture = capture
+        self.executor = executor
         self.dry_run = dry_run
-        self.action_points = action_points or {}
+        self.context_observer = context_observer
         self._bounds: WindowBounds | None = None
 
     def process_once(self, frame=None, now: float | None = None):
         now = time.monotonic() if now is None else now
+        try:
+            bounds = self.resolver.find(self.config.window_title_pattern)
+            self._bounds = bounds
+        except WindowNotFoundError:
+            if not self.dry_run or frame is not None:
+                raise
+            bounds = WindowBounds(0, 0, 1, 1)
+
+        if frame is None and self._bounds is not None:
+            frame = self.capture.grab(bounds)
+
+        if self.context_observer is not None:
+            self.context_observer.update(frame)
+
         result = self.machine.step(frame=frame, now=now)
+        data = result.data if isinstance(result.data, dict) else {}
+        state = data.get("state")
+        objective_id = data.get("objective_id")
+        if state is not None:
+            self.logger.stats.current_state = getattr(state, "name", str(state))
+        self.logger.stats.current_objective = objective_id or ""
         self.logger.stats.last_action = result.action
-        self.logger.event("Action decided", action=result.action, dry_run=self.dry_run)
+        self.logger.event(
+            "Action decided",
+            state=self.logger.stats.current_state,
+            objective=objective_id,
+            action=result.action,
+            dry_run=self.dry_run,
+        )
 
         if self.dry_run:
             return result
 
-        point = self.action_points.get(result.action)
-        if point is None:
-            self.logger.event("No click mapping for action", action=result.action)
-            return result
-
-        bounds = self._bounds or self.resolver.find(self.config.window_title_pattern)
-        self._bounds = bounds
-        self.clicker.click_relative(bounds, *point)
+        execution = self.executor.execute(result.action, frame=frame, bounds=bounds)
+        notify = getattr(self.machine, "notify_execution", None)
+        if callable(notify):
+            try:
+                notify(result.action, execution.executed, execution.configured)
+            except TypeError:
+                notify(result.action, execution.executed)
+        self.logger.event(
+            "Action execution",
+            action=result.action,
+            executed=execution.executed,
+            target=execution.target,
+            point=execution.point,
+            detail=execution.message,
+        )
         return result
+
+    def run_until(
+        self,
+        stop_event: threading.Event,
+        pause_event: threading.Event,
+        *,
+        interval: float = 0.6,
+    ) -> None:
+        while not stop_event.is_set():
+            if pause_event.is_set():
+                time.sleep(0.1)
+                continue
+            try:
+                self.process_once()
+            except Exception as exc:
+                self.logger.event("Runtime error", error=repr(exc))
+            time.sleep(interval)
 
 
 class ControlWindow:
-    def __init__(self, logger: SessionLogger):
-        self.logger = logger
+    def __init__(self, runtime: RuntimeApp):
+        self.runtime = runtime
+        self.logger = runtime.logger
         self.root = tk.Tk()
         self.root.title("DBL Auto Farmer")
         self.root.resizable(False, False)
-        self.running = False
-        self.paused = False
+        self._stop_event = threading.Event()
+        self._pause_event = threading.Event()
+        self._worker: threading.Thread | None = None
 
         self.status_var = tk.StringVar(value="Stopped")
         self.state_var = tk.StringVar(value="UNKNOWN")
@@ -103,22 +161,42 @@ class ControlWindow:
         ttk.Button(buttons, text="Start", command=self.start).grid(row=0, column=0, padx=3)
         ttk.Button(buttons, text="Pause", command=self.pause).grid(row=0, column=1, padx=3)
         ttk.Button(buttons, text="Stop", command=self.stop).grid(row=0, column=2, padx=3)
+        self.root.protocol("WM_DELETE_WINDOW", self.close)
         self.root.after(250, self.refresh)
 
     def start(self) -> None:
-        self.running = True
-        self.paused = False
+        if self._worker is not None and self._worker.is_alive():
+            self._pause_event.clear()
+            self.status_var.set("Running")
+            return
+        self._stop_event.clear()
+        self._pause_event.clear()
+        self._worker = threading.Thread(
+            target=self.runtime.run_until,
+            args=(self._stop_event, self._pause_event),
+            daemon=True,
+        )
+        self._worker.start()
         self.status_var.set("Running")
 
     def pause(self) -> None:
-        if self.running:
-            self.paused = not self.paused
-            self.status_var.set("Paused" if self.paused else "Running")
+        if self._worker is None or not self._worker.is_alive():
+            return
+        if self._pause_event.is_set():
+            self._pause_event.clear()
+            self.status_var.set("Running")
+        else:
+            self._pause_event.set()
+            self.status_var.set("Paused")
 
     def stop(self) -> None:
-        self.running = False
-        self.paused = False
+        self._stop_event.set()
+        self._pause_event.clear()
         self.status_var.set("Stopped")
+
+    def close(self) -> None:
+        self.stop()
+        self.root.destroy()
 
     def refresh(self) -> None:
         s = self.logger.stats
@@ -130,7 +208,8 @@ class ControlWindow:
         self.success_var.set(str(s.successful_stages))
         self.blocked_var.set(str(s.blocked_stages))
         self.defeats_var.set(str(s.current_defeats))
-        self.root.after(250, self.refresh)
+        if self.root.winfo_exists():
+            self.root.after(250, self.refresh)
 
     def run(self) -> None:
         self.root.mainloop()
@@ -148,13 +227,19 @@ def build_runtime(
     config_path: Path | str = Path("config.yaml"),
     click_fn: Callable[[int, int], None] | None = None,
     window_provider=None,
-    action_points: dict[str, tuple[float, float]] | None = None,
 ) -> RuntimeApp:
     config = load_config(Path(config_path))
     logger = SessionLogger(Path("logs"))
     detector = ScreenDetector(default_state_definitions())
-    objectives = ObjectiveQueue([])
+    objectives = build_default_objectives(
+        enable_story=config.enable_story,
+        enable_events=config.enable_events,
+    )
     resources = ResourceManager()
+    visual_resources = VisualResourceContextProvider(
+        template_root=Path("assets/templates"),
+        threshold=config.detection_threshold,
+    )
     recovery = RecoveryManager(
         soft_after=config.soft_recovery_seconds,
         navigation_after=config.navigation_recovery_seconds,
@@ -167,18 +252,24 @@ def build_runtime(
         objectives=objectives,
         resources=resources,
         recovery=recovery,
-        resource_context_provider=lambda: None,
+        resource_context_provider=visual_resources.current,
+        battle_runner=BattleRunner(max_defeats=config.max_defeats_per_stage),
     )
-    clicker = SafeClicker(click_fn or _default_click)
     resolver = BlueStacksWindowResolver(window_provider=window_provider)
+    capture = ScreenCapture()
+    executor = ActionExecutor(
+        template_root=Path("assets/templates"),
+        click_fn=click_fn or _default_click,
+    )
     return RuntimeApp(
         config=config,
         machine=machine,
         logger=logger,
-        clicker=clicker,
         resolver=resolver,
+        capture=capture,
+        executor=executor,
         dry_run=dry_run,
-        action_points=action_points,
+        context_observer=visual_resources,
     )
 
 
@@ -193,8 +284,8 @@ def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     runtime = build_runtime(dry_run=args.dry_run, config_path=args.config)
     runtime.logger.event("Runtime initialized", dry_run=args.dry_run)
-    print("DBL Auto Farmer initialized.")
-    print("Dry-run:" if args.dry_run else "Live mode:", args.dry_run)
+    ControlWindow(runtime).run()
+    print(runtime.logger.summary())
     return 0
 
 

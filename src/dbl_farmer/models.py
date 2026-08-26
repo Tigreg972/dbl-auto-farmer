@@ -16,6 +16,7 @@ class ScreenState(Enum):
     EQUIPMENT_SELECTION = auto()
     BATTLE = auto()
     RESULTS = auto()
+    DEFEAT = auto()
     REWARD_POPUP = auto()
     ENERGY_POPUP = auto()
     SKIP_TICKET_POPUP = auto()

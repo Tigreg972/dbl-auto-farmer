@@ -21,9 +21,9 @@ class NavigationRouter:
             return NavigationAction("OPEN_EVENTS", (ScreenState.EVENT_MENU, ScreenState.STAGE_LIST))
 
         mapping: dict[ScreenState, NavigationAction] = {
-            ScreenState.STORY_MENU: NavigationAction("OPEN_STAGE_LIST", (ScreenState.STAGE_LIST,)),
-            ScreenState.EVENT_MENU: NavigationAction("OPEN_STAGE_LIST", (ScreenState.STAGE_LIST,)),
-            ScreenState.STAGE_LIST: NavigationAction("SELECT_STAGE", (ScreenState.STAGE_DETAILS, ScreenState.PRE_BATTLE)),
+            ScreenState.STORY_MENU: NavigationAction("CONTINUE_STORY", (ScreenState.STAGE_LIST, ScreenState.PRE_BATTLE)),
+            ScreenState.EVENT_MENU: NavigationAction("OPEN_UNFINISHED_EVENT", (ScreenState.STAGE_LIST,)),
+            ScreenState.STAGE_LIST: NavigationAction("SELECT_UNFINISHED_STAGE", (ScreenState.STAGE_DETAILS, ScreenState.PRE_BATTLE)),
             ScreenState.STAGE_DETAILS: NavigationAction("OPEN_PRE_BATTLE", (ScreenState.PRE_BATTLE,)),
             ScreenState.PRE_BATTLE: NavigationAction("PREPARE_STAGE", (ScreenState.SKIP_TICKET_POPUP, ScreenState.TEAM_SELECTION)),
             ScreenState.SKIP_TICKET_POPUP: NavigationAction("CONFIRM_SKIP", (ScreenState.RESULTS, ScreenState.REWARD_POPUP)),
@@ -31,6 +31,7 @@ class NavigationRouter:
             ScreenState.EQUIPMENT_SELECTION: NavigationAction("CONFIRM_EQUIPMENT", (ScreenState.TEAM_SELECTION,)),
             ScreenState.BATTLE: NavigationAction("WAIT_FOR_RESULT", (ScreenState.RESULTS,)),
             ScreenState.RESULTS: NavigationAction("CONTINUE_RESULTS", (ScreenState.REWARD_POPUP, ScreenState.STAGE_LIST)),
+            ScreenState.DEFEAT: NavigationAction("RETRY_BATTLE", (ScreenState.BATTLE, ScreenState.TEAM_SELECTION)),
             ScreenState.REWARD_POPUP: NavigationAction("CLOSE_REWARD", (ScreenState.STAGE_LIST, ScreenState.RESULTS)),
             ScreenState.ERROR_POPUP: NavigationAction("CLOSE_ERROR"),
             ScreenState.UNKNOWN: NavigationAction("RECOVER"),
