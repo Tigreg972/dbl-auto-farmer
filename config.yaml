@@ -1,0 +1,12 @@
+window_title_pattern: "BlueStacks App Player"
+detection_threshold: 0.78
+soft_recovery_seconds: 15
+navigation_recovery_seconds: 45
+max_recovery_failures: 3
+max_defeats_per_stage: 3
+enable_story: true
+enable_events: true
+allow_energy_items: true
+allow_skip_tickets: true
+allow_chrono_crystals: false
+debug_screenshots: true
