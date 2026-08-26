@@ -1,6 +1,6 @@
 from dbl_farmer.models import ScreenState
 from dbl_farmer.vision.detector import ScreenDetector
-from dbl_farmer.vision.states import Cue, StateDefinition
+from dbl_farmer.vision.states import Cue, StateDefinition, default_state_definitions
 
 
 def test_detector_combines_multiple_cues():
@@ -46,3 +46,47 @@ def test_default_templates_use_semantic_subfolders():
     story_cue = next(c for c in home.cues if c.name == "story_button")
 
     assert story_cue.template_path.endswith("home/story_button.png")
+
+
+def test_default_definitions_include_defeat_state():
+    from dbl_farmer.vision.states import default_state_definitions
+
+    definitions = default_state_definitions("assets/templates")
+
+    assert any(d.state is ScreenState.DEFEAT for d in definitions)
+
+
+def test_default_home_can_be_recognized_from_story_and_event_buttons_without_logo():
+    scores = {"story_button": 0.98, "event_button": 0.97}
+    detector = ScreenDetector(
+        default_state_definitions("assets/templates"),
+        matcher=lambda _frame, cue: scores.get(cue.name, 0.0),
+    )
+
+    result = detector.detect(object())
+
+    assert result.state is ScreenState.HOME
+
+
+def test_story_menu_remains_recognizable_when_continue_disappears_at_completion():
+    scores = {"story_title": 0.98, "continue_button": 0.0}
+    detector = ScreenDetector(
+        default_state_definitions("assets/templates"),
+        matcher=lambda _frame, cue: scores.get(cue.name, 0.0),
+    )
+
+    result = detector.detect(object())
+
+    assert result.state is ScreenState.STORY_MENU
+
+
+def test_battle_can_be_recognized_when_auto_is_off():
+    scores = {"battle_hud": 0.98, "auto_off": 0.95}
+    detector = ScreenDetector(
+        default_state_definitions("assets/templates"),
+        matcher=lambda _frame, cue: scores.get(cue.name, 0.0),
+    )
+
+    result = detector.detect(object())
+
+    assert result.state is ScreenState.BATTLE

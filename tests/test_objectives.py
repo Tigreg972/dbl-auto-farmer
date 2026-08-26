@@ -32,3 +32,13 @@ def test_permanent_repeatable_requires_progress_flag():
         Objective("perm", ObjectiveKind.PERMANENT, "Permanent", required_for_progress=False),
     ])
     assert queue.next() is None
+
+
+def test_default_objectives_enable_story_then_events():
+    from dbl_farmer.farm.objectives import build_default_objectives
+
+    queue = build_default_objectives(enable_story=True, enable_events=True)
+
+    assert queue.next().id == "story-progress"
+    queue.mark_completed("story-progress")
+    assert queue.next().id == "event-progress"
