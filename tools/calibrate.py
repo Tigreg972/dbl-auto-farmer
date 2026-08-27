@@ -33,14 +33,14 @@ class CalibrationWindow:
         header.pack(fill="x")
         ttk.Label(
             header,
-            text="DBL Auto Farmer - UI Template Calibration",
+            text="DBL Auto Farmer - Calibration de l’interface",
             font=("Segoe UI", 13, "bold"),
         ).pack(anchor="w")
         ttk.Label(
             header,
             text=(
-                "Select an item, put Dragon Ball Legends on the matching screen in BlueStacks, "
-                "then click Capture selected. Keep BlueStacks at the same size while capturing."
+                "Sélectionne un élément, affiche l’écran correspondant dans Dragon Ball Legends sur BlueStacks, "
+                "puis clique sur « Capturer la sélection ». Garde la même taille de fenêtre BlueStacks pendant toute la calibration."
             ),
             wraplength=840,
         ).pack(anchor="w", pady=(4, 0))
@@ -54,14 +54,14 @@ class CalibrationWindow:
             show="headings",
             selectmode="browse",
         )
-        self.tree.heading("status", text="Status")
+        self.tree.heading("status", text="Statut")
         self.tree.heading("required", text="Type")
-        self.tree.heading("path", text="Template")
-        self.tree.heading("description", text="What to capture")
-        self.tree.column("status", width=70, anchor="center", stretch=False)
-        self.tree.column("required", width=80, anchor="center", stretch=False)
+        self.tree.heading("path", text="Modèle")
+        self.tree.heading("description", text="Élément à capturer")
+        self.tree.column("status", width=80, anchor="center", stretch=False)
+        self.tree.column("required", width=95, anchor="center", stretch=False)
         self.tree.column("path", width=250, stretch=False)
-        self.tree.column("description", width=450)
+        self.tree.column("description", width=430)
         scrollbar = ttk.Scrollbar(body, orient="vertical", command=self.tree.yview)
         self.tree.configure(yscrollcommand=scrollbar.set)
         self.tree.pack(side="left", fill="both", expand=True)
@@ -71,10 +71,10 @@ class CalibrationWindow:
         footer.pack(fill="x")
         self.summary_var = tk.StringVar(value="")
         ttk.Label(footer, textvariable=self.summary_var).pack(side="left")
-        ttk.Button(footer, text="Capture selected", command=self.capture_selected).pack(side="right", padx=4)
-        ttk.Button(footer, text="Delete selected", command=self.delete_selected).pack(side="right", padx=4)
-        ttk.Button(footer, text="Refresh", command=self.refresh).pack(side="right", padx=4)
-        ttk.Button(footer, text="Close", command=self.root.destroy).pack(side="right", padx=4)
+        ttk.Button(footer, text="Capturer la sélection", command=self.capture_selected).pack(side="right", padx=4)
+        ttk.Button(footer, text="Supprimer la sélection", command=self.delete_selected).pack(side="right", padx=4)
+        ttk.Button(footer, text="Actualiser", command=self.refresh).pack(side="right", padx=4)
+        ttk.Button(footer, text="Fermer", command=self.root.destroy).pack(side="right", padx=4)
 
         self.refresh()
 
@@ -105,8 +105,8 @@ class CalibrationWindow:
                 "end",
                 iid=str(index),
                 values=(
-                    "OK" if exists else "Missing",
-                    "Required" if spec.required else "Optional",
+                    "OK" if exists else "Manquant",
+                    "Obligatoire" if spec.required else "Optionnel",
                     spec.path,
                     spec.description,
                 ),
@@ -116,19 +116,19 @@ class CalibrationWindow:
                 self.tree.see(str(index))
 
         self.summary_var.set(
-            f"Captured {captured}/{len(self.specs)} | Required {required_captured}/{required_total}"
+            f"Capturés : {captured}/{len(self.specs)} | Obligatoires : {required_captured}/{required_total}"
         )
 
     def capture_selected(self) -> None:
         spec = self._selected_spec()
         if spec is None:
-            messagebox.showinfo("Calibration", "Select a template first.")
+            messagebox.showinfo("Calibration", "Sélectionne d’abord un élément à capturer.")
             return
 
         try:
             bounds = BlueStacksWindowResolver().find(self.window_pattern)
         except WindowNotFoundError as exc:
-            messagebox.showerror("BlueStacks not found", str(exc))
+            messagebox.showerror("BlueStacks introuvable", str(exc))
             return
 
         self.root.withdraw()
@@ -137,7 +137,7 @@ class CalibrationWindow:
         try:
             frame = ScreenCapture().grab(bounds)
             bgr = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
-            title = f"Capture: {spec.path} | ENTER=save ESC=cancel"
+            title = f"Capture : {spec.path} | ENTRÉE = enregistrer | ÉCHAP = annuler"
             x, y, width, height = map(
                 int,
                 cv2.selectROI(title, bgr, showCrosshair=True, fromCenter=False),
@@ -146,14 +146,14 @@ class CalibrationWindow:
             if width <= 0 or height <= 0:
                 return
             if x < 0 or y < 0 or x + width > bounds.width or y + height > bounds.height:
-                messagebox.showerror("Invalid selection", "The selected area is outside BlueStacks.")
+                messagebox.showerror("Sélection invalide", "La zone sélectionnée dépasse de la fenêtre BlueStacks.")
                 return
 
             crop = bgr[y : y + height, x : x + width]
             destination = self.template_root / spec.path
             destination.parent.mkdir(parents=True, exist_ok=True)
             if not cv2.imwrite(str(destination), crop):
-                raise RuntimeError(f"Could not save {destination}")
+                raise RuntimeError(f"Impossible d’enregistrer {destination}")
         finally:
             self.root.deiconify()
             self.root.lift()
@@ -173,10 +173,14 @@ class CalibrationWindow:
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="DBL Auto Farmer calibration utility")
-    parser.add_argument("--window", default="BlueStacks App Player")
-    parser.add_argument("--list", action="store_true", help="Print calibration status and exit")
-    parser.add_argument("--required-only", action="store_true", help="With --list, only show required missing templates")
+    parser = argparse.ArgumentParser(description="Outil de calibration de DBL Auto Farmer")
+    parser.add_argument("--window", default="BlueStacks App Player", help="Titre ou partie du titre de la fenêtre BlueStacks")
+    parser.add_argument("--list", action="store_true", help="Afficher l’état de la calibration puis quitter")
+    parser.add_argument(
+        "--required-only",
+        action="store_true",
+        help="Avec --list, afficher uniquement les captures obligatoires manquantes",
+    )
     return parser.parse_args(argv)
 
 
@@ -186,10 +190,10 @@ def main(argv: list[str] | None = None) -> int:
         root = ROOT / "assets" / "templates"
         missing = missing_templates(root, required_only=args.required_only)
         if not missing:
-            print("All requested templates are captured.")
+            print("Toutes les captures demandées sont présentes.")
             return 0
         for spec in missing:
-            kind = "required" if spec.required else "optional"
+            kind = "obligatoire" if spec.required else "optionnel"
             print(f"[{kind}] {spec.path} - {spec.description}")
         return 1
 
