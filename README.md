@@ -1,47 +1,51 @@
 # DBL Auto Farmer
 
-Windows / BlueStacks 5 client-side UI automation for Dragon Ball Legends. The bot uses OpenCV template recognition, a state machine, and clicks constrained to the detected BlueStacks window. It does **not** modify game memory, forge server progression, tamper with game network traffic, or bypass anti-cheat.
+Automatisation côté client pour Dragon Ball Legends sous Windows avec BlueStacks 5. Le bot utilise la reconnaissance d’images OpenCV, une machine à états et des clics limités à la fenêtre BlueStacks détectée. Il ne modifie pas la mémoire du jeu, ne falsifie pas la progression serveur, ne modifie pas le trafic réseau du jeu et ne contourne pas l’anti-cheat.
 
-## What the current V1 does
+## Ce que fait la V1
 
-- Farms Story first, then Events.
-- Uses screen-state detection instead of a fixed macro sequence.
-- Works with BlueStacks on either monitor.
-- Can use Skip Tickets when the Skip button is available.
-- Can use Energy-restoration items after the relevant popup templates are calibrated.
-- Never has an action that confirms Chrono Crystal spending.
-- Uses the game's Auto/Recommended team option when available, then presses Ready.
-- Ensures Auto Battle is enabled when an `AUTO OFF` button is detected.
-- Retries a battle and abandons the current stage after three detected defeats.
-- Logs every state, intended action, target and click.
-- Stops with `CALIBRATION_REQUIRED` when a required UI target has never been captured instead of guessing coordinates.
+- Fait d’abord l’Histoire, puis les Événements.
+- Détecte l’écran actuel au lieu d’exécuter une macro fixe.
+- Fonctionne avec BlueStacks placé sur l’un ou l’autre écran.
+- Peut utiliser les Tickets skip lorsque le bouton correspondant est disponible.
+- Peut utiliser des objets de restauration d’énergie lorsque les éléments nécessaires ont été calibrés.
+- Ne possède aucune action permettant de confirmer une dépense de Chrono Crystals.
+- Utilise les options Auto / Recommended du jeu pour l’équipe lorsqu’elles sont disponibles, puis appuie sur Ready.
+- Active le combat automatique lorsqu’un bouton indiquant que l’Auto est désactivé est détecté.
+- Retente un combat et abandonne le niveau après trois défaites détectées.
+- Journalise les écrans détectés, les actions prévues, les cibles et les clics.
+- Passe en « Calibration requise » lorsqu’un bouton obligatoire n’a jamais été capturé au lieu de cliquer au hasard.
 
-## Quick start on Windows
+## Démarrage rapide sous Windows
 
-1. Install Python 3.11+.
-2. Open the repository folder.
-3. Double-click `start.bat`.
-4. Choose **1** once to install dependencies.
-5. Choose **2** to calibrate the DB Legends UI in your current game language/resolution.
-6. Choose **3** for a dry run. The mouse must not move.
-7. When detection is correct, choose **4** for live mode.
+1. Installe Python 3.11 ou une version plus récente.
+2. Ouvre le dossier du dépôt.
+3. Double-clique sur `start.bat`.
+4. Choisis **1 - Installer / mettre à jour les dépendances** une première fois.
+5. Choisis **2 - Calibrer les boutons de l’interface** pour capturer les éléments de ta version actuelle de DB Legends.
+6. Choisis **3 - Test sans clic** pour vérifier la détection. La souris ne doit pas bouger.
+7. Quand la détection est correcte, choisis **4 - Lancer le bot**.
 
-The control window has Start / Pause / Stop buttons. Live automation begins only after pressing **Start**.
+La fenêtre de contrôle contient les boutons **Démarrer**, **Pause** et **Arrêter**. Le bot ne commence réellement à cliquer qu’après avoir appuyé sur **Démarrer**.
+
+## Langue du jeu
+
+L’interface du bot est en français. Pour la calibration, Dragon Ball Legends peut rester en anglais : c’est même recommandé pour garder les libellés des boutons stables et cohérents entre les captures.
 
 ## Tests
 
-From a command prompt in the repository:
+Depuis une invite de commandes ouverte dans le dépôt :
 
 ```bat
 set PYTHONPATH=src
 python -m pytest -q
 ```
 
-## Safety rules
+## Règles de sécurité
 
-- Energy and Energy-restoration items may be used.
-- Skip Tickets may be used.
-- Chrono Crystal spending is hard-coded forbidden and cannot be enabled through `config.yaml`.
-- All bot clicks must be inside the currently resolved BlueStacks window.
+- L’énergie et les objets de restauration d’énergie peuvent être utilisés.
+- Les Tickets skip peuvent être utilisés.
+- La dépense de Chrono Crystals est interdite en dur et ne peut pas être activée dans `config.yaml`.
+- Tous les clics du bot doivent rester à l’intérieur de la fenêtre BlueStacks actuellement détectée.
 
-See `docs/template-capture.md` for calibration instructions.
+Consulte `docs/template-capture.md` pour les instructions de calibration.
