@@ -1,4 +1,5 @@
 @echo off
+chcp 65001 >nul
 setlocal
 cd /d "%~dp0"
 set PYTHONPATH=%~dp0src
@@ -14,15 +15,15 @@ echo ========================================
 echo   DBL Auto Farmer - BlueStacks 5
 echo ========================================
 echo.
-echo  [1] Install / update dependencies
-echo  [2] Calibrate UI templates
-echo  [3] Dry run - detect only, no clicks
-echo  [4] Launch live bot
-echo  [5] Run tests
-echo  [6] Show missing required templates
-echo  [7] Quit
+echo  [1] Installer / mettre à jour les dépendances
+echo  [2] Calibrer les boutons de l'interface
+echo  [3] Test sans clic - détection uniquement
+echo  [4] Lancer le bot
+echo  [5] Lancer les tests
+echo  [6] Afficher les captures obligatoires manquantes
+echo  [7] Quitter
 echo.
-set /p choice=Choice (1-7): 
+set /p choice=Choix (1-7) : 
 
 if "%choice%"=="1" goto install
 if "%choice%"=="2" goto calibrate
