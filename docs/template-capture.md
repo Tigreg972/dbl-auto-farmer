@@ -1,20 +1,20 @@
-# Calibrating the Dragon Ball Legends interface
+# Calibration de l’interface Dragon Ball Legends
 
-The bot works from screenshots of the BlueStacks window. It does not rely on global screen coordinates, so BlueStacks can be on either monitor, but keep the BlueStacks window size stable after calibration.
+Le bot fonctionne à partir de captures de la fenêtre BlueStacks. Il ne dépend pas de coordonnées fixes sur tout l’écran, donc BlueStacks peut être placé sur l’un ou l’autre moniteur. En revanche, garde la même taille de fenêtre BlueStacks après la calibration.
 
-The easiest method is now:
+La méthode la plus simple est maintenant :
 
 ```bat
 start.bat
 ```
 
-Choose **2 - Calibrate UI templates**. A window lists every template, whether it has already been captured, and what you should select. Put DB Legends on the corresponding screen, select the row, click **Capture selected**, then draw a tight rectangle around the requested button or stable UI marker.
+Choisis **2 - Calibrer les boutons de l’interface**. Une fenêtre affiche toutes les captures attendues, indique celles qui existent déjà et explique ce qu’il faut sélectionner. Place DB Legends sur l’écran correspondant, sélectionne la ligne, clique sur **Capturer la sélection**, puis dessine un rectangle serré autour du bouton ou du repère demandé.
 
-Use the same game language for all captures. English is recommended because button labels remain consistent with the names used by the project.
+Utilise la même langue du jeu pour toutes les captures. L’anglais est recommandé afin de garder les textes des boutons stables et cohérents avec les noms utilisés par le projet.
 
-## Start with the Story path
+## Commencer par l’Histoire
 
-You do not need to capture every optional item before the first test. Capture these screens as you encounter them:
+Il n’est pas nécessaire de capturer tous les éléments optionnels avant le premier essai. Commence par ces éléments au fur et à mesure que tu rencontres les écrans :
 
 ```text
 home/home_logo.png
@@ -37,11 +37,11 @@ navigation/back_button.png
 navigation/home_button.png
 ```
 
-If the bot displays `CALIBRATION_REQUIRED`, stop it, reopen the calibration window, and capture the missing element shown in the session log. This is deliberate: when a required button has never been calibrated, the bot stops instead of guessing a screen coordinate.
+Si le bot affiche **Calibration requise**, arrête-le, rouvre la fenêtre de calibration et capture l’élément manquant indiqué dans le journal de session. Ce comportement est volontaire : lorsqu’un bouton obligatoire n’a jamais été calibré, le bot s’arrête au lieu de deviner une position à l’écran.
 
-## Energy and premium safety
+## Énergie et sécurité liée aux Chrono Crystals
 
-Energy-restoration items can be automated once these optional templates are captured:
+Les objets de restauration d’énergie peuvent être automatisés une fois ces captures optionnelles réalisées :
 
 ```text
 popup/energy_popup.png
@@ -49,11 +49,11 @@ popup/energy_item.png
 popup/energy_item_confirm.png
 ```
 
-Premium/Chrono Crystal confirmation is never an allowed action. Capturing `popup/chrono_crystal.png` improves detection, but the bot has no action that confirms a Chrono Crystal purchase. `popup/cancel.png` should be captured so premium refill prompts can be closed safely.
+La confirmation d’une dépense premium ou de Chrono Crystals n’est jamais une action autorisée. Capturer `popup/chrono_crystal.png` améliore la détection de ce type de fenêtre, mais le bot ne possède aucune action permettant de confirmer un achat en Chrono Crystals. Il est important de capturer `popup/cancel.png` afin que le bot puisse fermer ces fenêtres en toute sécurité.
 
-## Events
+## Événements
 
-For Events, capture:
+Pour les Événements, capture aussi :
 
 ```text
 event/event_title.png
@@ -62,4 +62,4 @@ event/unfinished_event.png
 stage_list/unfinished_stage.png
 ```
 
-`event/unfinished_event.png` should be the visible marker/card state that tells you an event is not yet finished. Once no matching unfinished event is visible, the event farming objective can finish rather than replaying a completed event.
+`event/unfinished_event.png` doit correspondre au repère visuel ou à l’état de carte qui permet d’identifier un événement encore non terminé. Lorsqu’aucun événement non terminé correspondant n’est visible, l’objectif de farm d’Événements peut se terminer au lieu de rejouer un événement déjà fini.
