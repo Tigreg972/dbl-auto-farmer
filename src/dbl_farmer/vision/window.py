@@ -60,5 +60,5 @@ class BlueStacksWindowResolver:
 
         titles = [str(getattr(window, "title", "")) for window in windows if getattr(window, "title", "")]
         raise WindowNotFoundError(
-            f"No visible window matching {pattern!r}. Visible windows: {titles}"
+            f"Aucune fenêtre visible ne correspond à {pattern!r}. Fenêtres visibles : {titles}"
         )
