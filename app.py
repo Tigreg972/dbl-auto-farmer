@@ -18,6 +18,7 @@ from dbl_farmer.input.executor import ActionExecutor
 from dbl_farmer.logging.session_log import SessionLogger
 from dbl_farmer.navigation.router import NavigationRouter
 from dbl_farmer.recovery.manager import RecoveryManager
+from dbl_farmer.ui.fr import action_label, objective_label, state_label, status_label
 from dbl_farmer.vision.capture import ScreenCapture
 from dbl_farmer.vision.detector import ScreenDetector
 from dbl_farmer.vision.states import default_state_definitions
@@ -72,11 +73,11 @@ class RuntimeApp:
         self.logger.stats.current_objective = objective_id or ""
         self.logger.stats.last_action = result.action
         self.logger.event(
-            "Action decided",
-            state=self.logger.stats.current_state,
-            objective=objective_id,
-            action=result.action,
-            dry_run=self.dry_run,
+            "Action décidée",
+            etat=state_label(self.logger.stats.current_state),
+            objectif=objective_label(objective_id or "-"),
+            action=action_label(result.action),
+            test_sans_clic=self.dry_run,
         )
 
         if self.dry_run:
@@ -90,10 +91,10 @@ class RuntimeApp:
             except TypeError:
                 notify(result.action, execution.executed)
         self.logger.event(
-            "Action execution",
-            action=result.action,
-            executed=execution.executed,
-            target=execution.target,
+            "Exécution de l’action",
+            action=action_label(result.action),
+            executee=execution.executed,
+            cible=execution.target,
             point=execution.point,
             detail=execution.message,
         )
@@ -113,7 +114,7 @@ class RuntimeApp:
             try:
                 self.process_once()
             except Exception as exc:
-                self.logger.event("Runtime error", error=repr(exc))
+                self.logger.event("Erreur d’exécution", erreur=repr(exc))
             time.sleep(interval)
 
 
@@ -122,14 +123,14 @@ class ControlWindow:
         self.runtime = runtime
         self.logger = runtime.logger
         self.root = tk.Tk()
-        self.root.title("DBL Auto Farmer")
+        self.root.title("DBL Auto Farmer - Contrôle")
         self.root.resizable(False, False)
         self._stop_event = threading.Event()
         self._pause_event = threading.Event()
         self._worker: threading.Thread | None = None
 
-        self.status_var = tk.StringVar(value="Stopped")
-        self.state_var = tk.StringVar(value="UNKNOWN")
+        self.status_var = tk.StringVar(value=status_label("Stopped"))
+        self.state_var = tk.StringVar(value=state_label("UNKNOWN"))
         self.objective_var = tk.StringVar(value="-")
         self.action_var = tk.StringVar(value="-")
         self.energy_var = tk.StringVar(value="0")
@@ -141,33 +142,33 @@ class ControlWindow:
         frame = ttk.Frame(self.root, padding=12)
         frame.grid(sticky="nsew")
         rows = [
-            ("Status", self.status_var),
-            ("State", self.state_var),
-            ("Objective", self.objective_var),
-            ("Last action", self.action_var),
-            ("Energy used", self.energy_var),
-            ("Skip Tickets used", self.skip_var),
-            ("Successful stages", self.success_var),
-            ("Blocked stages", self.blocked_var),
-            ("Current defeats", self.defeats_var),
-            ("Chrono Crystals spent", tk.StringVar(value="0")),
+            ("Statut", self.status_var),
+            ("Écran détecté", self.state_var),
+            ("Objectif", self.objective_var),
+            ("Dernière action", self.action_var),
+            ("Énergie utilisée", self.energy_var),
+            ("Tickets skip utilisés", self.skip_var),
+            ("Niveaux réussis", self.success_var),
+            ("Niveaux bloqués", self.blocked_var),
+            ("Défaites sur le niveau actuel", self.defeats_var),
+            ("Chrono Crystals dépensés", tk.StringVar(value="0")),
         ]
         for row, (label, variable) in enumerate(rows):
-            ttk.Label(frame, text=f"{label}:").grid(row=row, column=0, sticky="w", padx=(0, 10), pady=2)
+            ttk.Label(frame, text=f"{label} :").grid(row=row, column=0, sticky="w", padx=(0, 10), pady=2)
             ttk.Label(frame, textvariable=variable).grid(row=row, column=1, sticky="w", pady=2)
 
         buttons = ttk.Frame(frame)
         buttons.grid(row=len(rows), column=0, columnspan=2, pady=(10, 0))
-        ttk.Button(buttons, text="Start", command=self.start).grid(row=0, column=0, padx=3)
+        ttk.Button(buttons, text="Démarrer", command=self.start).grid(row=0, column=0, padx=3)
         ttk.Button(buttons, text="Pause", command=self.pause).grid(row=0, column=1, padx=3)
-        ttk.Button(buttons, text="Stop", command=self.stop).grid(row=0, column=2, padx=3)
+        ttk.Button(buttons, text="Arrêter", command=self.stop).grid(row=0, column=2, padx=3)
         self.root.protocol("WM_DELETE_WINDOW", self.close)
         self.root.after(250, self.refresh)
 
     def start(self) -> None:
         if self._worker is not None and self._worker.is_alive():
             self._pause_event.clear()
-            self.status_var.set("Running")
+            self.status_var.set(status_label("Running"))
             return
         self._stop_event.clear()
         self._pause_event.clear()
@@ -177,22 +178,22 @@ class ControlWindow:
             daemon=True,
         )
         self._worker.start()
-        self.status_var.set("Running")
+        self.status_var.set(status_label("Running"))
 
     def pause(self) -> None:
         if self._worker is None or not self._worker.is_alive():
             return
         if self._pause_event.is_set():
             self._pause_event.clear()
-            self.status_var.set("Running")
+            self.status_var.set(status_label("Running"))
         else:
             self._pause_event.set()
-            self.status_var.set("Paused")
+            self.status_var.set(status_label("Paused"))
 
     def stop(self) -> None:
         self._stop_event.set()
         self._pause_event.clear()
-        self.status_var.set("Stopped")
+        self.status_var.set(status_label("Stopped"))
 
     def close(self) -> None:
         self.stop()
@@ -200,9 +201,9 @@ class ControlWindow:
 
     def refresh(self) -> None:
         s = self.logger.stats
-        self.state_var.set(s.current_state)
-        self.objective_var.set(s.current_objective or "-")
-        self.action_var.set(s.last_action or "-")
+        self.state_var.set(state_label(s.current_state))
+        self.objective_var.set(objective_label(s.current_objective or "-"))
+        self.action_var.set(action_label(s.last_action or "-"))
         self.energy_var.set(str(s.energy_used))
         self.skip_var.set(str(s.skip_tickets_used))
         self.success_var.set(str(s.successful_stages))
@@ -275,15 +276,24 @@ def build_runtime(
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="DBL Auto Farmer")
-    parser.add_argument("--dry-run", action="store_true", help="Detect and log actions without clicking")
-    parser.add_argument("--config", type=Path, default=Path("config.yaml"))
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Détecter et journaliser les actions sans effectuer de clic",
+    )
+    parser.add_argument(
+        "--config",
+        type=Path,
+        default=Path("config.yaml"),
+        help="Chemin du fichier de configuration",
+    )
     return parser.parse_args(argv)
 
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     runtime = build_runtime(dry_run=args.dry_run, config_path=args.config)
-    runtime.logger.event("Runtime initialized", dry_run=args.dry_run)
+    runtime.logger.event("Moteur initialisé", test_sans_clic=args.dry_run)
     ControlWindow(runtime).run()
     print(runtime.logger.summary())
     return 0
