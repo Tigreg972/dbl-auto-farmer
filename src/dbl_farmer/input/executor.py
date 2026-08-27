@@ -169,11 +169,11 @@ class ActionExecutor:
 
     def execute(self, action: str, frame: object, bounds: WindowBounds) -> ActionExecution:
         if action in PASSIVE_ACTIONS:
-            return ActionExecution(True, passive=True, message="Passive action")
+            return ActionExecution(True, passive=True, message="Action passive")
 
         target = self.targets.get(action)
         if target is None:
-            return ActionExecution(False, message=f"No target mapping for {action}")
+            return ActionExecution(False, message=f"Aucune cible configurée pour {action}")
 
         for relative_path in target.templates:
             match = self.locator.find(
@@ -191,7 +191,7 @@ class ActionExecutor:
                 True,
                 target=relative_path,
                 point=point,
-                message=f"Clicked {relative_path}",
+                message=f"Clic effectué sur {relative_path}",
             )
 
         configured = any((self.template_root / relative_path).exists() for relative_path in target.templates)
@@ -199,11 +199,11 @@ class ActionExecutor:
             return ActionExecution(
                 True,
                 passive=True,
-                message=f"Optional target not visible for {action}",
+                message=f"Cible optionnelle non visible pour {action}",
                 configured=configured,
             )
         return ActionExecution(
             False,
-            message=f"No visible target for {action}",
+            message=f"Aucune cible visible pour {action}",
             configured=configured,
         )
