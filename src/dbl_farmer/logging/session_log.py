@@ -42,10 +42,10 @@ class SessionLogger:
         s = self.stats
         return "\n".join(
             [
-                f"Energy used: {s.energy_used}",
-                f"Skip Tickets used: {s.skip_tickets_used}",
-                f"Successful stages: {s.successful_stages}",
-                f"Blocked stages: {s.blocked_stages}",
-                f"Chrono Crystals spent: {s.chrono_crystals_spent}",
+                f"Énergie utilisée : {s.energy_used}",
+                f"Tickets skip utilisés : {s.skip_tickets_used}",
+                f"Niveaux réussis : {s.successful_stages}",
+                f"Niveaux bloqués : {s.blocked_stages}",
+                f"Chrono Crystals dépensés : {s.chrono_crystals_spent}",
             ]
         )
